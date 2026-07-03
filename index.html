@@ -802,7 +802,28 @@ function rebuildHistoryFromEntries(entries, history) {
   return additions;
 }
 
+function isCaughtUpOnLatestSeason(entry) {
+  const cache = entry.latestSeasonCache;
+  if (!cache || !cache.episodes || cache.episodes.length === 0) return null;
+  const today = new Date();
+  const aired = cache.episodes.filter(ep => ep.air_date && new Date(ep.air_date) <= today);
+  if (aired.length === 0) return null;
+  return aired.every(ep => entry.watchedEpisodes && entry.watchedEpisodes[`S${cache.season}E${ep.episode_number}`]);
+}
 
+function applyAutoStatus(entry) {
+  if (entry.type !== "TV Show") return entry;
+  const caughtUp = isCaughtUpOnLatestSeason(entry);
+  if (caughtUp === true && entry.status === "Watching") {
+    return { ...entry, status: "Completed" };
+  }
+  if (caughtUp === false && entry.status === "Completed") {
+    return { ...entry, status: "Watching" };
+  }
+  return entry;
+}
+
+/* ---------------- Main App ---------------- */
 function TVTracker() {
   const [entries, setEntries] = useState([]);
   const [history, setHistory] = useState([]);
@@ -897,10 +918,12 @@ function TVTracker() {
       });
     }
 
+    const finalEntry = applyAutoStatus(prev ? { ...form, id: modal.id, addedAt: modal.addedAt } : { ...form, id: entryId, addedAt: todayISO() });
+
     if (prev) {
-      persistEntries(entries.map(e => e.id === modal.id ? { ...form, id: modal.id, addedAt: modal.addedAt } : e));
+      persistEntries(entries.map(e => e.id === modal.id ? finalEntry : e));
     } else {
-      persistEntries([{ ...form, id: entryId, addedAt: todayISO() }, ...entries]);
+      persistEntries([finalEntry, ...entries]);
     }
     if (newHistoryItems.length || removedKeys.length) persistHistory([...newHistoryItems, ...historyAfterRemoval]);
     setModal(null);
@@ -926,10 +949,11 @@ function TVTracker() {
     if (!apiKey) return;
     setRefreshing(true);
     const candidates = entries.filter(e =>
-      e.type === "TV Show" && e.tmdbId && (e.status === "Watching" || e.status === "Watchlist")
+      e.type === "TV Show" && e.tmdbId &&
+      (e.status === "Watching" || e.status === "Watchlist" || e.status === "Completed")
     );
     const found = [];
-    const updatedEntries = [...entries];
+    let updatedEntries = [...entries];
 
     for (const entry of candidates) {
       try {
@@ -950,7 +974,17 @@ function TVTracker() {
           }
         });
         const idx = updatedEntries.findIndex(e => e.id === entry.id);
-        if (idx !== -1) updatedEntries[idx] = { ...updatedEntries[idx], latestSeasonCache: { season: latestSeason, fetchedAt: todayISO() } };
+        if (idx !== -1) {
+          const withCache = {
+            ...updatedEntries[idx],
+            latestSeasonCache: {
+              season: latestSeason,
+              episodes: eps.map(ep => ({ episode_number: ep.episode_number, air_date: ep.air_date })),
+              fetchedAt: todayISO(),
+            },
+          };
+          updatedEntries[idx] = applyAutoStatus(withCache);
+        }
       } catch (_) { /* skip entries that fail to fetch */ }
     }
 
@@ -972,7 +1006,7 @@ function TVTracker() {
     const updatedEntries = entries.map(e => {
       if (e.id !== ep.entryId) return e;
       const watchedEpisodes = { ...e.watchedEpisodes, [ep.key]: { watchedAt: todayISO(), name: ep.name, airDate: ep.airDate } };
-      return { ...e, watchedEpisodes };
+      return applyAutoStatus({ ...e, watchedEpisodes });
     });
     persistEntries(updatedEntries);
     persistHistory([{
