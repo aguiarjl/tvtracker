@@ -709,7 +709,7 @@ function EntryCard({ entry, onEdit }) {
 }
 
 /* ---------------- Home Tab ---------------- */
-function HomeTab({ entries, apiKey, newEpisodes, refreshing, onRefresh, onMarkWatched, onOpenSettings, lastChecked }) {
+function HomeTab({ entries, apiKey, newEpisodes, refreshing, onRefresh, onMarkWatched, onOpenSettings, lastChecked, history }) {
   const watching = entries.filter(e => e.status === "Watching").length;
   const watchlist = entries.filter(e => e.status === "Watchlist").length;
   const completed = entries.filter(e => e.status === "Completed").length;
@@ -780,6 +780,44 @@ function HomeTab({ entries, apiKey, newEpisodes, refreshing, onRefresh, onMarkWa
                 }}>Mark Watched</button>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h3 className="section-title" style={{ margin: "0 0 10px", fontSize: 14, color: "#F0F6FC", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          Recently Watched
+        </h3>
+        {history.length === 0 ? (
+          <div style={{ background: "#161B22", border: "1px solid #21262D", borderRadius: 12,
+            padding: 20, textAlign: "center", color: "#8B949E", fontSize: 13 }}>
+            Nothing watched yet. Mark an episode or movie and it'll show up here.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[...history]
+              .sort((a, b) => new Date(b.watchedAt) - new Date(a.watchedAt))
+              .slice(0, 8)
+              .map(h => (
+                <div key={h.id} className="new-ep-card" style={{
+                  display: "flex", alignItems: "center", gap: 12, background: "#161B22",
+                  border: "1px solid #21262D", borderRadius: 12, padding: 12,
+                }}>
+                  <Poster path={h.posterPath} type={h.type} size={40} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: "#F0F6FC", fontWeight: 700,
+                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.title}</div>
+                    {h.season ? (
+                      <div style={{ fontSize: 12, color: "#58A6FF", fontWeight: 600 }}>
+                        S{h.season}E{h.episode}{h.name ? ` · ${h.name}` : ""}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: "#8B949E" }}>Movie</div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#8B949E", flexShrink: 0 }}>{fmtDate(h.watchedAt)}</div>
+                </div>
+              ))}
           </div>
         )}
       </div>
@@ -1192,6 +1230,7 @@ function TVTracker() {
             onMarkWatched={markEpisodeWatchedFromHome}
             onOpenSettings={() => setSettingsOpen(true)}
             lastChecked={lastChecked}
+            history={history}
           />
         )}
 
