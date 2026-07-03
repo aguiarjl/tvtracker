@@ -216,8 +216,9 @@ function SettingsModal({ apiKey, onSave, onClose }) {
 }
 
 /* ---------------- Episode Browser (inside edit modal) ---------------- */
-function EpisodeBrowser({ entry, apiKey, onToggleEpisode }) {
+function EpisodeBrowser({ entry, apiKey, onToggleEpisode, onBulkMarkWatched }) {
   const [seasonCount, setSeasonCount] = useState(null);
+  const [seasonsMeta, setSeasonsMeta] = useState([]);
   const [season, setSeason] = useState(1);
   const [episodes, setEpisodes] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -231,6 +232,7 @@ function EpisodeBrowser({ entry, apiKey, onToggleEpisode }) {
         if (cancelled) return;
         setSeasonCount(details.number_of_seasons || 1);
         setSeason(details.number_of_seasons || 1);
+        setSeasonsMeta((details.seasons || []).filter(s => s.season_number > 0));
       } catch (e) {
         if (!cancelled) setError(e.message);
       }
@@ -260,6 +262,31 @@ function EpisodeBrowser({ entry, apiKey, onToggleEpisode }) {
 
   return (
     <div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        <button onClick={() => {
+          const aired = episodes.filter(ep => ep.air_date && new Date(ep.air_date) <= new Date());
+          onBulkMarkWatched(aired.map(ep => ({ season, episode: ep.episode_number, name: ep.name, airDate: ep.air_date })));
+        }} style={{
+          background: "rgba(63,185,80,0.13)", border: "1px solid #3FB95055", color: "#3FB950",
+          borderRadius: 7, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+        }}>Mark Season {season} Watched</button>
+
+        {season > 1 && (
+          <button onClick={() => {
+            const toMark = [];
+            seasonsMeta.filter(s => s.season_number < season).forEach(s => {
+              for (let e = 1; e <= s.episode_count; e++) {
+                toMark.push({ season: s.season_number, episode: e, name: null, airDate: null });
+              }
+            });
+            onBulkMarkWatched(toMark);
+          }} style={{
+            background: "rgba(88,166,255,0.13)", border: "1px solid #58A6FF55", color: "#58A6FF",
+            borderRadius: 7, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+          }}>Mark Seasons 1-{season - 1} Watched</button>
+        )}
+      </div>
+
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <label style={{ fontSize: 12, color: "#8B949E", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
           Episodes
@@ -363,6 +390,17 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
       const nowWatched = !watchedEpisodes[key];
       if (nowWatched) watchedEpisodes[key] = { watchedAt: todayISO(), name, airDate };
       else delete watchedEpisodes[key];
+      return { ...f, watchedEpisodes };
+    });
+  }
+
+  function bulkMarkWatched(episodeList) {
+    setForm(f => {
+      const watchedEpisodes = { ...f.watchedEpisodes };
+      episodeList.forEach(({ season, episode, name, airDate }) => {
+        const key = `S${season}E${episode}`;
+        if (!watchedEpisodes[key]) watchedEpisodes[key] = { watchedAt: todayISO(), name, airDate };
+      });
       return { ...f, watchedEpisodes };
     });
   }
@@ -498,7 +536,7 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
               )}
 
               {form.type === "TV Show" && form.tmdbId && apiKey && (
-                <EpisodeBrowser entry={form} apiKey={apiKey} onToggleEpisode={toggleEpisode} />
+                <EpisodeBrowser entry={form} apiKey={apiKey} onToggleEpisode={toggleEpisode} onBulkMarkWatched={bulkMarkWatched} />
               )}
 
               <div>
