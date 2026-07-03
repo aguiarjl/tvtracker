@@ -826,9 +826,18 @@ function TVTracker() {
           storage.get(HISTORY_KEY).catch(() => null),
           storage.get(APIKEY_KEY).catch(() => null),
         ]);
-        if (e?.value) setEntries(JSON.parse(e.value));
-        if (h?.value) setHistory(JSON.parse(h.value));
+        const loadedEntries = e?.value ? JSON.parse(e.value) : [];
+        const loadedHistory = h?.value ? JSON.parse(h.value) : [];
+        if (e?.value) setEntries(loadedEntries);
+        if (h?.value) setHistory(loadedHistory);
         if (k?.value) setApiKey(k.value);
+
+        const additions = rebuildHistoryFromEntries(loadedEntries, loadedHistory);
+        if (additions.length) {
+          const merged = [...additions, ...loadedHistory];
+          setHistory(merged);
+          try { await storage.set(HISTORY_KEY, JSON.stringify(merged)); } catch (_) {}
+        }
       } catch (_) {}
       setLoaded(true);
     })();
