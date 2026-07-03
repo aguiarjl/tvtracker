@@ -43,7 +43,11 @@
     .section-title { font-size: 12px !important; margin-bottom: 6px !important; }
     .entry-card { padding: 10px 12px !important; gap: 8px !important; }
     .modal-overlay { padding: 8px !important; align-items: flex-end !important; }
-    .modal-box { padding: 16px !important; max-height: 94vh !important; border-radius: 16px 16px 0 0 !important; }
+    .modal-box { padding: 16px !important; max-height: 94vh !important; border-radius: 16px 16px 0 0 !important; overflow-x: hidden !important; }
+    .bulk-actions-row { flex-direction: column !important; }
+    .bulk-actions-row button { width: 100% !important; box-sizing: border-box !important; }
+    .form-section-gap { gap: 10px !important; }
+    .modal-header-row { margin-bottom: 12px !important; }
     .add-title-btn { padding: 8px 12px !important; font-size: 12px !important; }
     .footer-note { font-size: 9px !important; margin-top: 20px !important; }
     .home-stats-row { gap: 8px !important; }
@@ -85,17 +89,12 @@ const STATUS_META = {
   Dropped:   { color: "#F85149", bg: "rgba(248,81,73,0.13)",   icon: "✕" },
 };
 
-const GENRE_OPTIONS = [
-  "Action", "Comedy", "Drama", "Horror", "Sci-Fi",
-  "Thriller", "Romance", "Documentary", "Anime", "Fantasy", "Mystery", "Other",
-];
-
 const POSTER_BASE = "https://image.tmdb.org/t/p/w185";
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
 function defaultForm() {
   return {
-    title: "", type: "TV Show", status: "Watchlist", rating: "", genre: "", notes: "",
+    title: "", type: "TV Show", status: "Watchlist", rating: "",
     tmdbId: null, imdbId: null, posterPath: null,
     watchedEpisodes: {}, latestSeasonCache: null,
   };
@@ -308,45 +307,38 @@ function EpisodeBrowser({ entry, apiKey, onToggleEpisode, onBulkMarkWatched, onL
 
   return (
     <div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-        <button onClick={() => {
-          const aired = episodes.filter(ep => ep.air_date && new Date(ep.air_date) <= new Date());
-          onBulkMarkWatched(aired.map(ep => ({ season, episode: ep.episode_number, name: ep.name, airDate: ep.air_date })));
-        }} style={{
-          background: "rgba(63,185,80,0.13)", border: "1px solid #3FB95055", color: "#3FB950",
-          borderRadius: 7, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
-        }}>Mark Season {season} Watched</button>
-
-        {season > 1 && (
-          <button onClick={() => {
-            const toMark = [];
-            seasonsMeta.filter(s => s.season_number < season).forEach(s => {
-              for (let e = 1; e <= s.episode_count; e++) {
-                toMark.push({ season: s.season_number, episode: e, name: null, airDate: null });
-              }
-            });
-            onBulkMarkWatched(toMark);
-          }} style={{
-            background: "rgba(88,166,255,0.13)", border: "1px solid #58A6FF55", color: "#58A6FF",
-            borderRadius: 7, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
-          }}>Mark Seasons 1-{season - 1} Watched</button>
-        )}
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
         <label style={{ fontSize: 12, color: "#8B949E", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
           Episodes
         </label>
-        {seasonCount && (
-          <select value={season} onChange={e => setSeason(Number(e.target.value))} style={{
-            background: "#0D1117", border: "1px solid #30363D", borderRadius: 6,
-            color: "#F0F6FC", padding: "4px 8px", fontSize: 12,
-          }}>
-            {Array.from({ length: seasonCount }, (_, i) => i + 1).map(s => (
-              <option key={s} value={s}>Season {s}</option>
-            ))}
-          </select>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {seasonCount && (
+            <select value={season} onChange={e => setSeason(Number(e.target.value))} style={{
+              background: "#0D1117", border: "1px solid #30363D", borderRadius: 6,
+              color: "#F0F6FC", padding: "4px 8px", fontSize: 12,
+            }}>
+              {Array.from({ length: seasonCount }, (_, i) => i + 1).map(s => (
+                <option key={s} value={s}>Season {s}</option>
+              ))}
+            </select>
+          )}
+          <button onClick={() => {
+            const toMark = [];
+            const aired = episodes.filter(ep => ep.air_date && new Date(ep.air_date) <= new Date());
+            aired.forEach(ep => toMark.push({ season, episode: ep.episode_number, name: ep.name, airDate: ep.air_date }));
+            if (season === seasonCount) {
+              seasonsMeta.filter(s => s.season_number < season).forEach(s => {
+                for (let e = 1; e <= s.episode_count; e++) {
+                  toMark.push({ season: s.season_number, episode: e, name: null, airDate: null });
+                }
+              });
+            }
+            onBulkMarkWatched(toMark);
+          }} style={{
+            background: "rgba(63,185,80,0.13)", border: "1px solid #3FB95055", color: "#3FB950",
+            borderRadius: 7, padding: "5px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+          }}>Mark Completed</button>
+        </div>
       </div>
 
       {error && <p style={{ color: "#F85149", fontSize: 12 }}>{error}</p>}
@@ -501,7 +493,7 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
         overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
       }} onClick={e => e.stopPropagation()}>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div className="modal-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h2 style={{ margin: 0, color: "#F0F6FC", fontSize: 18, fontWeight: 700 }}>
             {isEdit ? "Edit Entry" : "Add to List"}
           </h2>
@@ -511,7 +503,7 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
           }}>×</button>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="form-section-gap" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
           <div>
             <label style={labelStyle}>Type</label>
@@ -580,20 +572,11 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
                 )}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={labelStyle}>Status</label>
-                  <select style={inputStyle} value={form.status} onChange={e => set("status", e.target.value)}>
-                    {Object.keys(STATUS_META).map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>Genre</label>
-                  <select style={inputStyle} value={form.genre} onChange={e => set("genre", e.target.value)}>
-                    <option value="">--</option>
-                    {GENRE_OPTIONS.map(g => <option key={g}>{g}</option>)}
-                  </select>
-                </div>
+              <div>
+                <label style={labelStyle}>Status</label>
+                <select style={inputStyle} value={form.status} onChange={e => set("status", e.target.value)}>
+                  {Object.keys(STATUS_META).map(s => <option key={s}>{s}</option>)}
+                </select>
               </div>
 
               <div>
@@ -627,12 +610,6 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
                 </>
               )}
 
-              <div>
-                <label style={labelStyle}>Notes</label>
-                <textarea style={{ ...inputStyle, resize: "vertical", minHeight: 60 }}
-                  placeholder="Thoughts, where you left off..."
-                  value={form.notes} onChange={e => set("notes", e.target.value)} />
-              </div>
             </>
           )}
         </div>
@@ -688,20 +665,10 @@ function EntryCard({ entry, onEdit }) {
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <Badge status={entry.status} />
-          {entry.genre && (
-            <span style={{ fontSize: 11, color: "#8B949E", background: "#21262D",
-              borderRadius: 5, padding: "2px 7px" }}>{entry.genre}</span>
-          )}
           <ImdbLink imdbId={entry.imdbId} />
         </div>
         {entry.type === "TV Show" && watchedCount > 0 && (
           <span style={{ fontSize: 11, color: "#8B949E" }}>{watchedCount} episode{watchedCount !== 1 ? "s" : ""} watched</span>
-        )}
-        {entry.notes && (
-          <p style={{ margin: 0, fontSize: 12, color: "#8B949E", lineHeight: 1.4,
-            display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-            {entry.notes}
-          </p>
         )}
       </div>
     </div>
@@ -710,22 +677,8 @@ function EntryCard({ entry, onEdit }) {
 
 /* ---------------- Home Tab ---------------- */
 function HomeTab({ entries, apiKey, newEpisodes, refreshing, onRefresh, onMarkWatched, onOpenSettings, lastChecked, history }) {
-  const watching = entries.filter(e => e.status === "Watching").length;
-  const watchlist = entries.filter(e => e.status === "Watchlist").length;
-  const completed = entries.filter(e => e.status === "Completed").length;
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div className="home-stats-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        {[["Watching", watching, "#58A6FF"], ["Watchlist", watchlist, "#E5A000"], ["Completed", completed, "#3FB950"]].map(([label, count, color]) => (
-          <div key={label} className="stat-pill" style={{ flex: "1 1 100px", background: "#161B22", border: "1px solid #21262D",
-            borderRadius: 12, padding: "14px 16px" }}>
-            <div className="stat-pill-value" style={{ fontSize: 22, fontWeight: 800, color }}>{count}</div>
-            <div className="stat-pill-label" style={{ fontSize: 11, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
-          </div>
-        ))}
-      </div>
-
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <h3 className="section-title" style={{ margin: 0, fontSize: 14, color: "#F0F6FC", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>
@@ -952,7 +905,21 @@ function isCaughtUp(entry) {
   return airedLatest.every(ep => watched[`S${cache.season}E${ep.episode_number}`]);
 }
 
+function applyCompletionPromotion(entry) {
+  // Safe to run on every save: only ever promotes to Completed, never demotes
+  // an already-Completed (possibly manually-set) status. Prevents a stale or
+  // slightly-off episode cache from silently undoing a deliberate "Complete
+  // Show" click or manual status change.
+  if (entry.type !== "TV Show" || entry.status === "Dropped" || entry.status === "Completed") return entry;
+  const caughtUp = isCaughtUp(entry);
+  if (caughtUp === true) return { ...entry, status: "Completed" };
+  return entry;
+}
+
 function applyAutoStatus(entry) {
+  // Full bidirectional check - only used by the periodic new-episode refresh,
+  // where demoting Completed -> Watchlist upon a genuinely new episode is the
+  // intended behavior.
   if (entry.type !== "TV Show" || entry.status === "Dropped") return entry;
   const caughtUp = isCaughtUp(entry);
   if (caughtUp === true && entry.status !== "Completed") {
@@ -1059,7 +1026,7 @@ function TVTracker() {
       });
     }
 
-    const finalEntry = applyAutoStatus(prev ? { ...form, id: modal.id, addedAt: modal.addedAt } : { ...form, id: entryId, addedAt: todayISO() });
+    const finalEntry = applyCompletionPromotion(prev ? { ...form, id: modal.id, addedAt: modal.addedAt } : { ...form, id: entryId, addedAt: todayISO() });
 
     if (prev) {
       persistEntries(entries.map(e => e.id === modal.id ? finalEntry : e));
@@ -1150,7 +1117,7 @@ function TVTracker() {
     const updatedEntries = entries.map(e => {
       if (e.id !== ep.entryId) return e;
       const watchedEpisodes = { ...e.watchedEpisodes, [ep.key]: { watchedAt: todayISO(), name: ep.name, airDate: ep.airDate } };
-      return applyAutoStatus({ ...e, watchedEpisodes });
+      return applyCompletionPromotion({ ...e, watchedEpisodes });
     });
     persistEntries(updatedEntries);
     persistHistory([{
@@ -1161,7 +1128,7 @@ function TVTracker() {
     setNewEpisodes(prev => prev.filter(e => !(e.entryId === ep.entryId && e.key === ep.key)));
   }
 
-  const TABS = ["All", "Watching", "Watchlist", "Completed", "Dropped"];
+  const TABS = ["All", "Watchlist", "Completed", "Dropped"];
   const libraryEntries = entries.filter(e => {
     const tabMatch = libraryFilter === "All" || e.status === libraryFilter;
     const searchMatch = e.title.toLowerCase().includes(search.toLowerCase());
