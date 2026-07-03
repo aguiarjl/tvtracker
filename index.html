@@ -288,7 +288,11 @@ function EpisodeBrowser({ entry, apiKey, onToggleEpisode, onBulkMarkWatched, onL
         if (!cancelled) {
           setEpisodes(eps);
           if (seasonCount && season === seasonCount) {
-            onLatestSeasonData(season, eps.map(ep => ({ episode_number: ep.episode_number, air_date: ep.air_date })));
+            onLatestSeasonData(
+              season,
+              eps.map(ep => ({ episode_number: ep.episode_number, air_date: ep.air_date })),
+              seasonsMeta.map(s => ({ season_number: s.season_number, episode_count: s.episode_count }))
+            );
           }
         }
       } catch (e) {
@@ -298,7 +302,7 @@ function EpisodeBrowser({ entry, apiKey, onToggleEpisode, onBulkMarkWatched, onL
       }
     })();
     return () => { cancelled = true; };
-  }, [season, entry.tmdbId, apiKey, seasonCount]);
+  }, [season, entry.tmdbId, apiKey, seasonCount, seasonsMeta]);
 
   const today = new Date();
 
@@ -447,8 +451,8 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
     });
   }
 
-  function updateLatestSeasonCache(season, episodes) {
-    setForm(f => ({ ...f, latestSeasonCache: { season, episodes, fetchedAt: todayISO() } }));
+  function updateLatestSeasonCache(season, episodes, allSeasonsMeta) {
+    setForm(f => ({ ...f, latestSeasonCache: { season, episodes, allSeasonsMeta, fetchedAt: todayISO() } }));
   }
 
   const inputStyle = {
@@ -848,23 +852,38 @@ function rebuildHistoryFromEntries(entries, history) {
   return additions;
 }
 
-function isCaughtUpOnLatestSeason(entry) {
+function isCaughtUp(entry) {
   const cache = entry.latestSeasonCache;
-  if (!cache || !cache.episodes || cache.episodes.length === 0) return null;
+  if (!cache || !cache.episodes) return null;
+
+  const watched = entry.watchedEpisodes || {};
+
+  // Every episode in every season before the latest is assumed aired
+  // (a later season existing implies earlier ones already finished airing).
+  const priorSeasons = (cache.allSeasonsMeta || []).filter(s => s.season_number < cache.season);
+  for (const s of priorSeasons) {
+    for (let e = 1; e <= s.episode_count; e++) {
+      if (!watched[`S${s.season_number}E${e}`]) return false;
+    }
+  }
+
   const today = new Date();
-  const aired = cache.episodes.filter(ep => ep.air_date && new Date(ep.air_date) <= today);
-  if (aired.length === 0) return null;
-  return aired.every(ep => entry.watchedEpisodes && entry.watchedEpisodes[`S${cache.season}E${ep.episode_number}`]);
+  const airedLatest = cache.episodes.filter(ep => ep.air_date && new Date(ep.air_date) <= today);
+  if (airedLatest.length === 0) {
+    if (priorSeasons.length === 0) return null; // nothing has aired yet at all
+    return true; // earlier seasons fully watched, nothing new out yet
+  }
+  return airedLatest.every(ep => watched[`S${cache.season}E${ep.episode_number}`]);
 }
 
 function applyAutoStatus(entry) {
-  if (entry.type !== "TV Show") return entry;
-  const caughtUp = isCaughtUpOnLatestSeason(entry);
-  if (caughtUp === true && entry.status === "Watching") {
+  if (entry.type !== "TV Show" || entry.status === "Dropped") return entry;
+  const caughtUp = isCaughtUp(entry);
+  if (caughtUp === true && entry.status !== "Completed") {
     return { ...entry, status: "Completed" };
   }
   if (caughtUp === false && entry.status === "Completed") {
-    return { ...entry, status: "Watching" };
+    return { ...entry, status: "Watchlist" };
   }
   return entry;
 }
@@ -1026,6 +1045,9 @@ function TVTracker() {
             latestSeasonCache: {
               season: latestSeason,
               episodes: eps.map(ep => ({ episode_number: ep.episode_number, air_date: ep.air_date })),
+              allSeasonsMeta: (details.seasons || [])
+                .filter(s => s.season_number > 0)
+                .map(s => ({ season_number: s.season_number, episode_count: s.episode_count })),
               fetchedAt: todayISO(),
             },
           };
