@@ -700,13 +700,18 @@ function HomeTab({ entries, apiKey, newEpisodes, refreshing, onRefresh, onMarkWa
 }
 
 /* ---------------- History Tab ---------------- */
-function HistoryTab({ history }) {
+function HistoryTab({ history, onSync, syncMessage }) {
   if (history.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "60px 0", color: "#8B949E" }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>📼</div>
         <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#F0F6FC" }}>No watch history yet</p>
-        <p style={{ margin: "6px 0 0", fontSize: 13 }}>Mark episodes or movies as watched to see them here.</p>
+        <p style={{ margin: "6px 0 16px", fontSize: 13 }}>Mark episodes or movies as watched to see them here.</p>
+        <button onClick={onSync} style={{
+          background: "none", border: "1px solid #30363D", color: "#8B949E",
+          borderRadius: 8, padding: "8px 16px", fontSize: 12, cursor: "pointer",
+        }}>Sync History From Watch Status</button>
+        {syncMessage && <p style={{ marginTop: 10, fontSize: 12, color: "#3FB950" }}>{syncMessage}</p>}
       </div>
     );
   }
@@ -721,6 +726,13 @@ function HistoryTab({ history }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
+        {syncMessage && <span style={{ fontSize: 12, color: "#3FB950" }}>{syncMessage}</span>}
+        <button onClick={onSync} style={{
+          background: "none", border: "1px solid #30363D", color: "#8B949E",
+          borderRadius: 7, padding: "5px 12px", fontSize: 11, cursor: "pointer",
+        }}>Sync History</button>
+      </div>
       {Object.entries(groups).map(([day, items]) => (
         <div key={day}>
           <div style={{ fontSize: 12, color: "#8B949E", fontWeight: 700, textTransform: "uppercase",
@@ -749,7 +761,48 @@ function HistoryTab({ history }) {
   );
 }
 
-/* ---------------- Main App ---------------- */
+function rebuildHistoryFromEntries(entries, history) {
+  const existingKeys = new Set(
+    history.map(h => `${h.entryId}-${h.season || ""}-${h.episode || ""}-${h.type}`)
+  );
+  const additions = [];
+
+  entries.forEach(entry => {
+    if (entry.type === "TV Show") {
+      Object.entries(entry.watchedEpisodes || {}).forEach(([key, info]) => {
+        const m = key.match(/^S(\d+)E(\d+)$/);
+        const season = m ? m[1] : null;
+        const episode = m ? m[2] : null;
+        const dedupeKey = `${entry.id}-${season || ""}-${episode || ""}-TV Show`;
+        if (!existingKeys.has(dedupeKey)) {
+          additions.push({
+            id: `${entry.id}-${key}-rebuild-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            entryId: entry.id, title: entry.title, type: "TV Show",
+            season, episode, name: (info && info.name) || null,
+            posterPath: entry.posterPath, imdbId: entry.imdbId,
+            watchedAt: (info && info.watchedAt) || entry.addedAt || todayISO(),
+          });
+          existingKeys.add(dedupeKey);
+        }
+      });
+    } else if (entry.type === "Movie" && entry.status === "Completed") {
+      const realKey = `${entry.id}-${""}-${""}-Movie`;
+      if (!existingKeys.has(realKey)) {
+        additions.push({
+          id: `${entry.id}-movie-rebuild-${Date.now()}`,
+          entryId: entry.id, title: entry.title, type: "Movie",
+          posterPath: entry.posterPath, imdbId: entry.imdbId,
+          watchedAt: entry.addedAt || todayISO(),
+        });
+        existingKeys.add(realKey);
+      }
+    }
+  });
+
+  return additions;
+}
+
+
 function TVTracker() {
   const [entries, setEntries] = useState([]);
   const [history, setHistory] = useState([]);
@@ -763,6 +816,7 @@ function TVTracker() {
   const [newEpisodes, setNewEpisodes] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [lastChecked, setLastChecked] = useState(null);
+  const [syncMessage, setSyncMessage] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -841,6 +895,17 @@ function TVTracker() {
     }
     if (newHistoryItems.length || removedKeys.length) persistHistory([...newHistoryItems, ...historyAfterRemoval]);
     setModal(null);
+  }
+
+  function syncHistory() {
+    const additions = rebuildHistoryFromEntries(entries, history);
+    if (additions.length) {
+      persistHistory([...additions, ...history]);
+      setSyncMessage(`Added ${additions.length} entr${additions.length === 1 ? "y" : "ies"}`);
+    } else {
+      setSyncMessage("Already up to date");
+    }
+    setTimeout(() => setSyncMessage(null), 4000);
   }
 
   function handleDelete(id) {
@@ -1027,7 +1092,7 @@ function TVTracker() {
           </>
         )}
 
-        {tab === "History" && <HistoryTab history={history} />}
+        {tab === "History" && <HistoryTab history={history} onSync={syncHistory} syncMessage={syncMessage} />}
 
         <p style={{ marginTop: 40, fontSize: 10, color: "#484F58", textAlign: "center" }}>
           This product uses the TMDB API but is not endorsed or certified by TMDB.
