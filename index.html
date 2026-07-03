@@ -798,11 +798,48 @@ function TVTracker() {
   }
 
   function handleSave(form) {
-    if (modal && modal.id) {
+    const prev = modal && modal.id ? entries.find(e => e.id === modal.id) : null;
+    const entryId = prev ? prev.id : Date.now().toString();
+    const prevWatched = (prev && prev.watchedEpisodes) || {};
+    const newHistoryItems = [];
+
+    Object.entries(form.watchedEpisodes || {}).forEach(([key, info]) => {
+      if (!prevWatched[key]) {
+        const m = key.match(/^S(\d+)E(\d+)$/);
+        newHistoryItems.push({
+          id: `${entryId}-${key}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          entryId, title: form.title, type: "TV Show",
+          season: m ? m[1] : null, episode: m ? m[2] : null, name: info.name,
+          posterPath: form.posterPath, imdbId: form.imdbId,
+          watchedAt: info.watchedAt || todayISO(),
+        });
+      }
+    });
+
+    const removedKeys = Object.keys(prevWatched).filter(k => !(form.watchedEpisodes || {})[k]);
+    let historyAfterRemoval = history;
+    if (removedKeys.length) {
+      const removedSet = new Set(removedKeys.map(k => {
+        const m = k.match(/^S(\d+)E(\d+)$/);
+        return `${entryId}-${m ? m[1] : ""}-${m ? m[2] : ""}`;
+      }));
+      historyAfterRemoval = history.filter(h => !removedSet.has(`${h.entryId}-${h.season}-${h.episode}`));
+    }
+
+    if (form.type === "Movie" && form.status === "Completed" && (!prev || prev.status !== "Completed")) {
+      newHistoryItems.push({
+        id: `${entryId}-movie-${Date.now()}`,
+        entryId, title: form.title, type: "Movie",
+        posterPath: form.posterPath, imdbId: form.imdbId, watchedAt: todayISO(),
+      });
+    }
+
+    if (prev) {
       persistEntries(entries.map(e => e.id === modal.id ? { ...form, id: modal.id, addedAt: modal.addedAt } : e));
     } else {
-      persistEntries([{ ...form, id: Date.now().toString(), addedAt: todayISO() }, ...entries]);
+      persistEntries([{ ...form, id: entryId, addedAt: todayISO() }, ...entries]);
     }
+    if (newHistoryItems.length || removedKeys.length) persistHistory([...newHistoryItems, ...historyAfterRemoval]);
     setModal(null);
   }
 
