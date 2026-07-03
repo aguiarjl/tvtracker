@@ -2,16 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="TV Tracker" />
+<meta name="theme-color" content="#0D1117" />
+<link rel="apple-touch-icon" href="data:image/png;base64,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" />
+<link rel="icon" href="data:image/png;base64,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" />
 <title>TV Tracker</title>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-  body { margin: 0; }
+  body {
+    margin: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    background: #0D1117;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (display-mode: standalone) {
+    body { overscroll-behavior-y: none; }
+  }
   @media (max-width: 640px) {
     .app-header { padding: 12px 14px 0 !important; margin-bottom: 12px !important; }
     .app-title { font-size: 17px !important; }
@@ -235,7 +253,7 @@ function SettingsModal({ apiKey, onSave, onClose }) {
 }
 
 /* ---------------- Episode Browser (inside edit modal) ---------------- */
-function EpisodeBrowser({ entry, apiKey, onToggleEpisode, onBulkMarkWatched }) {
+function EpisodeBrowser({ entry, apiKey, onToggleEpisode, onBulkMarkWatched, onLatestSeasonData }) {
   const [seasonCount, setSeasonCount] = useState(null);
   const [seasonsMeta, setSeasonsMeta] = useState([]);
   const [season, setSeason] = useState(1);
@@ -267,7 +285,12 @@ function EpisodeBrowser({ entry, apiKey, onToggleEpisode, onBulkMarkWatched }) {
     (async () => {
       try {
         const eps = await getSeasonEpisodes(entry.tmdbId, season, apiKey);
-        if (!cancelled) setEpisodes(eps);
+        if (!cancelled) {
+          setEpisodes(eps);
+          if (seasonCount && season === seasonCount) {
+            onLatestSeasonData(season, eps.map(ep => ({ episode_number: ep.episode_number, air_date: ep.air_date })));
+          }
+        }
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {
@@ -275,7 +298,7 @@ function EpisodeBrowser({ entry, apiKey, onToggleEpisode, onBulkMarkWatched }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [season, entry.tmdbId, apiKey]);
+  }, [season, entry.tmdbId, apiKey, seasonCount]);
 
   const today = new Date();
 
@@ -424,6 +447,10 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
     });
   }
 
+  function updateLatestSeasonCache(season, episodes) {
+    setForm(f => ({ ...f, latestSeasonCache: { season, episodes, fetchedAt: todayISO() } }));
+  }
+
   const inputStyle = {
     width: "100%", background: "#0D1117", border: "1px solid #30363D",
     borderRadius: 8, color: "#F0F6FC", padding: "8px 12px", fontSize: 14,
@@ -555,7 +582,7 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
               )}
 
               {form.type === "TV Show" && form.tmdbId && apiKey && (
-                <EpisodeBrowser entry={form} apiKey={apiKey} onToggleEpisode={toggleEpisode} onBulkMarkWatched={bulkMarkWatched} />
+                <EpisodeBrowser entry={form} apiKey={apiKey} onToggleEpisode={toggleEpisode} onBulkMarkWatched={bulkMarkWatched} onLatestSeasonData={updateLatestSeasonCache} />
               )}
 
               <div>
