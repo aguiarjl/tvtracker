@@ -44,6 +44,8 @@
     .entry-card { padding: 10px 12px !important; gap: 8px !important; }
     .modal-overlay { padding: 8px !important; align-items: flex-end !important; }
     .modal-box { padding: 16px !important; max-height: 94vh !important; border-radius: 16px 16px 0 0 !important; overflow-x: hidden !important; }
+    .modal-box input, .modal-box select, .modal-box textarea, .modal-box button { min-width: 0 !important; max-width: 100% !important; box-sizing: border-box !important; }
+    .modal-box * { min-width: 0; }
     .bulk-actions-row { flex-direction: column !important; }
     .bulk-actions-row button { width: 100% !important; box-sizing: border-box !important; }
     .form-section-gap { gap: 10px !important; }
@@ -524,8 +526,8 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
           {!isEdit && apiKey && mode === "search" && (
             <div>
               <label style={labelStyle}>Search TMDB</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input style={inputStyle} placeholder="e.g. The Bear"
+              <div style={{ display: "flex", gap: 8, minWidth: 0 }}>
+                <input style={{ ...inputStyle, minWidth: 0 }} placeholder="e.g. The Bear"
                   value={query} onChange={e => setQuery(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && runSearch()} autoFocus />
                 <button onClick={runSearch} style={{
@@ -566,9 +568,9 @@ function Modal({ entry, apiKey, onClose, onSave, onDelete }) {
             <>
               <div>
                 <label style={labelStyle}>Title</label>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
                   {form.posterPath && <Poster path={form.posterPath} type={form.type} size={30} />}
-                  <input style={inputStyle} placeholder="e.g. The Bear" value={form.title}
+                  <input style={{ ...inputStyle, minWidth: 0 }} placeholder="e.g. The Bear" value={form.title}
                     onChange={e => set("title", e.target.value)} />
                 </div>
                 {form.imdbId && <div style={{ marginTop: 8 }}><ImdbLink imdbId={form.imdbId} /></div>}
